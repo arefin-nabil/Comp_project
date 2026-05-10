@@ -9,10 +9,12 @@ use App\Models\RegistrationPayment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
+use App\Services\Wallet\WalletService;
 use Exception;
 
 class RegistrationService
 {
+    public function __construct(protected WalletService $walletService) {}
     /**
      * Reserve phone to prevent race conditions during registration form filling.
      */
@@ -67,6 +69,33 @@ class RegistrationService
                 'status' => 'verified',
                 'verified_at' => now(),
             ]);
+
+            // Distribute Registration Fee
+            $referrerSplit = config('mlm.registration_referrer_split', '30.0000');
+            $companySplit = config('mlm.registration_company_split', '70.0000');
+
+            $this->walletService->credit(
+                wallet: $referrer->wallet,
+                amount: $referrerSplit,
+                category: 'registration_bonus',
+                referenceType: RegistrationPayment::class,
+                referenceId: $payment->id,
+                idempotencyKey: "reg_bonus_{$payment->id}",
+                description: "Bonus for referring user {$user->phone}"
+            );
+
+            $companyUser = User::getCompanyUser();
+            if ($companyUser && $companyUser->wallet) {
+                $this->walletService->credit(
+                    wallet: $companyUser->wallet,
+                    amount: $companySplit,
+                    category: 'registration_fee',
+                    referenceType: RegistrationPayment::class,
+                    referenceId: $payment->id,
+                    idempotencyKey: "reg_company_{$payment->id}",
+                    description: "Company share for user {$user->phone} registration"
+                );
+            }
 
             // Release lock
             Cache::forget("phone_reservation:{$data['phone']}");

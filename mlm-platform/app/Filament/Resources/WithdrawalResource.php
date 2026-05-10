@@ -130,6 +130,39 @@ class WithdrawalResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn (Withdrawal $record) => $record->status === 'pending' && $record->otp_verified)
+                    ->form([
+                        Forms\Components\TextInput::make('gateway_transaction_id')
+                            ->label('Gateway Transaction ID')
+                            ->required(),
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Notes'),
+                    ])
+                    ->action(function (Withdrawal $record, array $data) {
+                        try {
+                            app(\App\Services\Withdrawal\WithdrawalService::class)->approveAndPay(
+                                withdrawal: $record,
+                                approver: auth()->user(),
+                                gatewayTxnId: $data['gateway_transaction_id'] ?? null,
+                                notes: $data['notes'] ?? null
+                            );
+                            \Filament\Notifications\Notification::make()
+                                ->title('Withdrawal Approved')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Error')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

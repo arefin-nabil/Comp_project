@@ -8,6 +8,8 @@ use App\Services\Wallet\WalletService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Jobs\ActivateClubJob;
+use App\Jobs\DistributeTeamIncomeJob;
 
 class PurchaseService
 {
@@ -89,6 +91,8 @@ class PurchaseService
             $customerWallet->save();
 
             // Note: Team income distribution is handled via Domain Events & Jobs asynchronously
+            DistributeTeamIncomeJob::dispatch($purchase)->afterCommit();
+            ActivateClubJob::dispatch($customer)->afterCommit();
 
             return $purchase;
         });

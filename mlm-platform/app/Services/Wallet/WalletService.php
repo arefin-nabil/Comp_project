@@ -40,7 +40,7 @@ class WalletService
         string $description = '',
         array $metadata = []
     ): WalletTransaction {
-        if ($amount <= 0) {
+        if (bccomp($amount, '0.0000', 4) <= 0) {
             throw new Exception("Credit amount must be greater than zero.");
         }
 
@@ -105,7 +105,7 @@ class WalletService
         string $description = '',
         array $metadata = []
     ): WalletTransaction {
-        if ($amount <= 0) {
+        if (bccomp($amount, '0.0000', 4) <= 0) {
             throw new Exception("Debit amount must be greater than zero.");
         }
 

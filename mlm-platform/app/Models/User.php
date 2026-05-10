@@ -115,7 +115,11 @@ class User extends Authenticatable implements FilamentUser
         return $query->where('club_income_eligible', true);
     }
 
-    // Helpers
+    public static function getCompanyUser(): ?User
+    {
+        return self::where('phone', '01000000001')->first();
+    }
+
     public function isShopper(): bool
     {
         return $this->hasRole('shopper');
@@ -123,6 +127,6 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->hasRole('admin');
+        return $this->hasAnyRole(['superadmin', 'admin_general', 'admin_finance', 'admin_ecommerce']);
     }
 }
